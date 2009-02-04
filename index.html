@@ -19,6 +19,8 @@ body, textarea {
 
 <p>I have made this Rich Text Editor as simple as possible to be easily changed according your needs. The file jquery.rte.js is only 7ko uncompressed. This editor is compatible with major browsers (IE6, Firefox 2, Opera 9, Safari 3.03) and degrade gracefully in a textarea for others.</p>
 
+<p><a href="http://code.google.com/p/rte-light/">jQuery RTE google code project</a>.</p>
+
 <form style="border:1px #bbb solid;padding:1em;">
     <p>
         <textarea name="description" id="id_description" class="rte-zone" height="150">jQuery RTE 1</textarea>
@@ -32,7 +34,10 @@ body, textarea {
 <script type="text/javascript" src="http://jqueryjs.googlecode.com/files/jquery-1.2.6.min.js"></script>
 <script type="text/javascript" src="jquery.rte.js"></script>
 <script type="text/javascript">
-$('.rte-zone').rte('rte.css', '');
+$(".rte-zone").rte({
+    content_css_url: "rte.css",
+    media_url: "",
+});
 </script>
 
 
