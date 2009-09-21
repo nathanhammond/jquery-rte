@@ -3,11 +3,20 @@
 *
 * Copyright (c) 2009 Batiste Bieler
 * Distributed under the GPL Licenses.
-* Distributed under the The MIT License.
+* Distributed under the MIT License.
 */
 
 // define the rte light plugin
 (function($) {
+
+if(typeof $.fn.rte === "undefined") {
+
+    var defaults = {
+        media_url: "",
+        content_css_url: "rte.css",
+        dot_net_button_class: null,
+        max_height: 350
+    };
 
     $.fn.rte = function(options) {
 
@@ -15,19 +24,11 @@
         return iframe.contentWindow.document.getElementsByTagName("body")[0].innerHTML;
     };
 
-    $.fn.rte.defaults = {
-        media_url: "",
-        content_css_url: "rte.css",
-        dot_net_button_class: null,
-        max_height: 350
-    };
-
     // build main options before element iteration
-    var opts = $.extend($.fn.rte.defaults, options);
+    var opts = $.extend(defaults, options);
 
     // iterate and construct the RTEs
     return this.each( function() {
-
         var textarea = $(this);
         var iframe;
         var element_id = textarea.attr("id");
@@ -44,6 +45,7 @@
 
             // already created? show/hide
             if(iframe) {
+                console.log("already created");
                 textarea.hide();
                 $(iframe).contents().find("body").html(content);
                 $(iframe).show();
@@ -118,7 +120,7 @@
                 textarea.val(content);
             }
 
-            if(submit != true) {
+            if(submit !== true) {
                 textarea.show();
                 $(iframe).hide();
             }
@@ -267,12 +269,14 @@
             }
             return node;
         };
-
+        
         // enable design mode now
         enableDesignMode();
 
     }); //return this.each
     
-};// rte
+    }; // rte
+
+} // if
 
 })(jQuery);
