@@ -15,7 +15,7 @@
 				iframe.frameBorder = this.options.iframe.border;
 				iframe.frameMargin = this.options.iframe.margin;
 				iframe.framePadding = this.options.iframe.padding;
-				iframe.className = this.options.iframe.class;
+				iframe.className = this.options.iframe.classname;
 				iframe.id = this.element.attr('id') + '_' + this.options.iframe.idsuffix;
 			this.iframe = iframe;
 
@@ -24,9 +24,9 @@
 
 			// Add content to the iframe.
 			var iframecontent = '<html><head><link type="text/css" rel="stylesheet" href="' + this.options.css + '" /></head><body>' + content + '</body></html>';
-			this._designmode(iframecontent);		
+			this._designmode(iframecontent, this.options.attempts);		
 		},
-		_designmode: function(iframecontent) {
+		_designmode: function(iframecontent, remaining) {
 			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
@@ -54,8 +54,10 @@
 				}
 			}
 
-			// Try again in case the iframe is taking its own sweet time.
-			setTimeout(function() { plugin._designmode(iframecontent); }, 500);
+			if (remaining-- > 0) {
+				// Try again in case the iframe is taking its own sweet time.
+				setTimeout(function() { plugin._designmode(iframecontent, remaining); }, 500);
+			}
 		},
 		_iframeready: function() {
 			this.loaded = true;
@@ -208,9 +210,36 @@
 			select.selectedIndex=0;
 			return true;
 		},
-		_updatetextarea: function() {
-			
+
+		/* Get textarea; Set textarea. */
+		_textareacontent: function() {
+			var textarea = this.element;
+			var content = textarea.val();
+
+			return content;			
 		},
+		_updatetextarea: function() {
+			var textarea = this.element;
+			var iframe = this.iframe;
+			
+			textarea.val(this._iframecontent());			
+		},
+
+		/* Get iframe; Set iframe. */
+		_iframecontent: function() {
+			var iframe = this.iframe;
+			var content = iframe.contentWindow.document.getElementsByTagName("body")[0].innerHTML;
+
+			return content;
+		},
+		_updateiframe: function() {
+			var textarea = this.element;
+			var iframe = this.iframe;
+
+			$(iframe).contents().find("body").html(this._textareacontent());
+		},
+
+		/* Public methods. */
 		toggle: function() {
 			var plugin = this;
 			var textarea = this.element;
@@ -219,6 +248,7 @@
 
 			if (this.design) {
 				// Switch to HTML view.
+				this._updatetextarea();
 				toolbar.children().hide();
 				var edm = $('<a class="rte-edm" href="#">Enable design mode</a>');
 				toolbar.append(edm);
@@ -231,32 +261,40 @@
 					$(this).remove();
 				});
 			} else {
+				// Switch to design view.
+				this._updateiframe();
 				toolbar.children().show();
 				$(iframe).show();
 				textarea.hide();
-				// Switch to design view.
 			}
 			this.design = !this.design;
 		},
 		content: function() {
-			var iframe = this.iframe;
-			var content;
-		
-			// Which one?
-			content = iframe.contentWindow.document.getElementsByTagName("body")[0].innerHTML;
-			content = $(iframe).contents().find("body").html();
-
-			return content;
+			if (this.design) {
+				return this._iframecontent();
+			} else {
+				return this._textareacontent();
+			}
 		},
 		destroy: function() {
-			
+			var textarea = this.element;
+			var iframe = this.iframe;
+			var toolbar = this.toolbar;
+
+			if (this.design) {
+				this._updatetextarea();
+			}
+			toolbar.remove();
+			$(iframe).remove();
+			textarea.show();
 		},
 		options: {
 			media_url: "_img/",
 			css: "_css/rte.css",
 			dot_net_button_class: null,
 			max_height: 350,
-			iframe: { class: 'rte', idsuffix: 'iframe', margin: 0, border: 0, padding: 0 }
+			iframe: { classname: 'rte', idsuffix: 'iframe', margin: 0, border: 0, padding: 0 },
+			attempts: 3
 		}
 	};
 	$.widget("ui.rte", RTE);
