@@ -12,7 +12,7 @@ label { margin-top: 1em; }
 <body>
 	<div class="container">
 		<h1>jQuery Rich Text Editor Plugin</h1>
-		<p>A lightweight (&lt; 300 lines of code!) rich text editor built on top of jQuery.</p>
+		<p>A lightweight (&lt; 250 lines of code!) rich text editor built on top of jQuery UI.</p>
 
 		<h2>Details</h2>
 		<p>This editor is designed with extensibility in mind to use as a base for integration into your own projects.</p>
@@ -28,10 +28,15 @@ label { margin-top: 1em; }
 				<span>Description:</span>
 				<textarea name="description" id="description" class="rte-zone" rows="3" cols="30">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do &lt;span style="font-weight:bold;"&gt;eiusmod tempor&lt;/span&gt; incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
 			</label>
+			<label for="description2">
+				<span>Description:</span>
+				<textarea name="description2" id="description2" class="rte-zone" rows="3" cols="30">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do &lt;span style="font-weight:bold;"&gt;eiusmod tempor&lt;/span&gt; incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
+			</label>
 			<input type="submit" value="Submit" />
 		</div></form>
 	</div>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="jquery.rte.js"></script>
 	<script type="text/javascript">
 		$("textarea").rte({
