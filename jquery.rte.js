@@ -309,7 +309,7 @@
 		},
 		options: {
 			media_url: "_img/",
-			css: "_css/rte.css",
+			css: "_css/jquery.rte.css",
 			dot_net_button_class: null,
 			max_height: 350,
 			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 },
