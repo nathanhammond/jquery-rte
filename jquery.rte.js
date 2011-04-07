@@ -100,24 +100,35 @@
 					plugin._formatText("formatoolbarlock", '<'+selected+'>');
 				}
 			});
-			$('.rte-bold', toolbar).click(function(){ plugin._formatText('bold');return false; });
-			$('.rte-italic', toolbar).click(function(){ plugin._formatText('italic');return false; });
-			$('.rte-unorderedlist', toolbar).click(function(){ plugin._formatText('insertunorderedlist');return false; });
-			$('.rte-link', toolbar).click(function(){
-				if (!plugin._getRange()) { alert('Select text first!'); return false; }
-				var p=prompt("URL:");
-				if(p)
-					plugin._formatText('CreateLink', p);
-				return false; });
+			
+			toolbar.delegate('a', 'click', function() {
+				$this = $(this);
+				var action = $this.attr('class').split('-')[1];
 
-			$('.rte-image', toolbar).click(function(){
-				var p=prompt("image URL:");
-				if(p)
-					plugin._formatText('InsertImage', p);
-				return false; });
+				switch (action) {
+					case 'link':
+						var linktext = plugin._getRange();
+						if (!linktext) { alert('Select text first!'); return false; }
 
-			$('.rte-toggle', toolbar).click(function() {
-				plugin.toggle();
+						var url = prompt('URL:');
+						if (url) {
+							plugin._formatText('CreateLink', url);
+						}
+						break;
+					case 'image':
+						var url = prompt('URL:');
+						if (url) {
+							plugin._formatText('InsertImage', url);
+						}
+						break;
+					case 'toggle':
+						plugin.toggle();
+						break;
+					default:
+						// bold, italic, unorderedlist
+						plugin._formatText(action);
+						break;
+				}
 				return false;
 			});
 
