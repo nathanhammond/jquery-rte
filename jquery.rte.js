@@ -84,6 +84,7 @@
 			// Build the toolbar.
 			// TODO: allow this to be user-specified.
 			this._loadtoolbar();
+			this._buildoverlay();
 			textarea.addClass('rte-textarea');
 
 			// And we're done.
@@ -130,21 +131,21 @@
 				switch (action) {
 					case 'link':
 						var linktext = plugin._getRange();
-						if (!linktext) { alert('Select text first!'); return false; }
-
-						var url = prompt('URL:');
-						if (url) {
-							plugin._formatText('CreateLink', url);
+						if (!linktext) {
+							plugin._showoverlay(plugin._buildmessage('Select text first!'));
+							return false;
 						}
+
+						plugin._showoverlay(plugin._buildlink(linktext));
 						break;
 					case 'image':
 						var linktext = plugin._getRange();
-						if (linktext) { alert('Text would be deleted. Select insertion point.'); return false; }
-
-						var url = prompt('URL:');
-						if (url) {
-							plugin._formatText('InsertImage', url);
+						if (linktext) {
+							plugin._showoverlay(plugin._buildmessage('Text would be deleted. Select insertion point.'));
+							return false;
 						}
+
+						plugin._showoverlay(plugin._buildimage());
 						break;
 					case 'toggle':
 						plugin.toggle();
@@ -179,6 +180,104 @@
 
 			this.toolbar = toolbar;
 			textarea.before(toolbar);
+		},
+
+		// Build the overlay.
+		_buildoverlay: function() {
+			var plugin = this;
+			var overlay = $('<div class="rte-overlay"></div>');
+			overlay.hide();
+			$('body').append(overlay);
+
+			$(window).bind('resize', function() {
+				plugin._positionoverlay();
+			});
+			this.overlay = overlay;
+		},
+
+		// For positioning the overlay
+		_positionoverlay: function() {
+			var toolbar = this.toolbar;
+			var iframe = this.iframe;
+			var overlay = this.overlay;
+
+			var toolbarposition = toolbar.position();
+			var iframeposition = $(iframe).position();
+			var toolbarwidth = toolbar.outerWidth();
+			var iframewidth = $(iframe).outerWidth();
+			var iframeheight = $(iframe).outerHeight();
+
+			var css = {};
+			css.top = toolbarposition.top;
+			css.left = toolbarposition.left;
+			css.width = Math.max(iframewidth, toolbarwidth);
+			css.height = - toolbarposition.top + iframeposition.top + iframeheight;
+
+			overlay.css(css);
+		},
+
+		// Show the overlay.
+		_showoverlay: function(content) {
+			var overlay = this.overlay;
+			this._positionoverlay();
+			this._overlaycontent(content)
+			overlay.show();			
+		},
+
+		// Hide the overlay.
+		_hideoverlay: function() {
+			var overlay = this.overlay;
+			overlay.hide();
+			overlay.empty();
+		},
+
+		// Set the content of the overlay.
+		_overlaycontent: function(content) {
+			var overlay = this.overlay;
+			overlay.append(content);
+		},
+
+		// Helper function to build the message URL overlay.
+		_buildmessage: function(message) {
+			var plugin = this;
+			var content = $('<div class="rte-overlay-content">' + message + '<input class="rte-cancel" type="button" value="Close" /></div>')
+			content.find('input.rte-cancel').click(function() {
+				plugin._hideoverlay();
+			});
+			
+			return content;
+		},
+
+		// Helper function to build the link url overlay.
+		_buildlink: function(linktext) {
+			var plugin = this;
+			var content = $('<div class="rte-overlay-content">'+ linktext +'URL: <input class="rte-url" type="text" /><input class="rte-cancel" type="button" value="Close" /><input class="rte-submit" type="button" value="Submit" /></div>')
+			var $url = content.find('input.rte-url');
+			content.find('input.rte-submit').click(function() {
+				plugin._formatText('CreateLink', $url.val());
+				plugin._hideoverlay();
+			});
+			content.find('input.rte-cancel').click(function() {
+				plugin._hideoverlay();
+			});
+
+			return content;
+		},
+
+		// Helper function to build the link url overlay.
+		_buildimage: function(linktext) {
+			var plugin = this;
+			var content = $('<div class="rte-overlay-content">URL: <input class="rte-url" type="text" /><input class="rte-cancel" type="button" value="Close" /><input class="rte-submit" type="button" value="Submit" /></div>')
+			var $url = content.find('input.rte-url');
+			content.find('input.rte-submit').click(function() {
+				plugin._formatText('InsertImage', $url.val());
+				plugin._hideoverlay();
+			});
+			content.find('input.rte-cancel').click(function() {
+				plugin._hideoverlay();
+			});
+
+			return content;
 		},
 
 		// Helper function to ensure the commands are correctly passed to the iframe.
@@ -337,6 +436,7 @@
 			}
 			toolbar.remove();
 			$(iframe).remove();
+			overlay.remove();
 			textarea.removeClass('rte-textarea');
 			textarea.show();
 		},
