@@ -3,7 +3,7 @@
 <head>
 <title>jQuery Rich Text Editor Plugin Tests</title>
 <link rel="stylesheet" type="text/css" href="qunit/qunit/qunit.css" />
-<link rel="stylesheet" type="text/css" href="../_css/rte.css" />
+<link rel="stylesheet" type="text/css" href="../_css/jquery.rte.css" />
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
 <script type="text/javascript" src="../jquery.rte.js"></script>
@@ -17,7 +17,7 @@
 			media_url: "../_img/"
 		});
 
-		equals($("#test1").prev()[0].nodeName, "DIV", "toolbar is created");
+		equals($("#test1").prev()[0].nodeName, "UL", "toolbar is created");
 		equals($("#test1").next()[0].nodeName, "IFRAME", "iframe is created");
 	});
 </script>
