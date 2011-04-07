@@ -170,15 +170,9 @@
 				});
 			}
 
-			var iframeDoc = $(iframe.contentWindow.document);
-
+			var $iframeDoc = $(iframe.contentWindow.document);
 			var select = $('select', toolbar)[0];
-			iframeDoc.mouseup(function(){
-				plugin._setSelectedType(plugin._getSelectionElement(), select);
-				return true;
-			});
-
-			iframeDoc.keyup(function() {
+			$iframeDoc.bind('mouseup keyup', function(){
 				plugin._setSelectedType(plugin._getSelectionElement(), select);
 				return true;
 			});
