@@ -138,6 +138,9 @@
 						}
 						break;
 					case 'image':
+						var linktext = plugin._getRange();
+						if (linktext) { alert('Text would be deleted. Select insertion point.'); return false; }
+
 						var url = prompt('URL:');
 						if (url) {
 							plugin._formatText('InsertImage', url);
@@ -177,14 +180,6 @@
 
 			iframeDoc.keyup(function() {
 				plugin._setSelectedType(plugin._getSelectionElement(), select);
-				var body = $('body', iframeDoc);
-				if(body.scrollTop() > 0) {
-					var iframe_height = parseInt(iframe.style['height'])
-					if(isNaN(iframe_height))
-						iframe_height = 0;
-					var h = Math.min(plugin.options.max_height, iframe_height+body.scrollTop()) + 'px';
-					iframe.style['height'] = h;
-				}
 				return true;
 			});
 
@@ -355,7 +350,6 @@
 			media_url: "_img/",
 			css: "_css/jquery.rte.css",
 			dot_net_button_class: null,
-			max_height: 350,
 			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 },
 			attempts: 3
 		}
