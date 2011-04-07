@@ -1,7 +1,14 @@
 (function($) {
 	var RTE  = {
 		_create: function() {},
+		
+		// Let's get started.
 		_init: function() {
+			// Set some state flags.
+			this.design = false;
+			this.loaded = false;
+
+			// Make sure we've always got the right elements in any closure.
 			var textarea = this.element;
 			var content = textarea.val();
 
@@ -21,13 +28,16 @@
 
 			// Add the iframe into the document.
 			textarea.after(iframe);
-			$(iframe).after('<br / style="clear: left;">')
+			$(iframe).after('<br style="clear: left;" />')
 
 			// Add content to the iframe.
 			var iframecontent = '<html><head><link type="text/css" rel="stylesheet" href="' + this.options.css + '" /></head><body>' + content + '</body></html>';
 			this._designmode(iframecontent, this.options.attempts);		
 		},
+		
+		// The iframe has been added to the page, try and set it to design mode.
 		_designmode: function(iframecontent, remaining) {
+			// Make sure we've always got the right elements in any closure.
 			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
@@ -58,24 +68,36 @@
 			if (remaining-- > 0) {
 				// Try again in case the iframe is taking its own sweet time.
 				setTimeout(function() { plugin._designmode(iframecontent, remaining); }, 500);
+			} else {
+				this.destroy();
 			}
 		},
+
+		// The iframe is loaded, we're ready to toggle on design mode.
 		_iframeready: function() {
+			// Set some state flags.
 			this.loaded = true;
-			this.design = true;
 
+			// Capture the textarea.
 			var textarea = this.element;
-			var iframe = this.iframe;
 
-			// Great, we're set.
+			// Build the toolbar.
+			// TODO: allow this to be user-specified.
 			this._loadtoolbar();
 			textarea.addClass('rte-textarea');
-			textarea.hide();
+
+			// And we're done.
+			this.toggle();
 		},
+
+		// This builds the toolbar, adds its events, and inserts it into the page.
 		_loadtoolbar: function() {
+			// Make sure we've always got the right elements in any closure.
 			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
+
+			// Build the toolbar.
 			var toolbar = $("<ul class='rte-toolbar'>\
 				<li>\
 					<select>\
@@ -169,6 +191,8 @@
 			this.toolbar = toolbar;
 			textarea.before(toolbar);
 		},
+
+		// Helper function to ensure the commands are correctly passed to the iframe.
 		_formatText: function(command, option) {
 			var iframe = this.iframe;
 
@@ -180,6 +204,8 @@
 			}
 			iframe.contentWindow.focus();
 		},
+
+		// Helper function to grab the text value of the range.
 		_getRange: function() {
 			var iframe = this.iframe;
 
@@ -205,6 +231,8 @@
 
 			return value;
 		},
+
+		// Helper function to get the text node the current range is in.
 		_getSelectionElement: function() {
 			var iframe = this.iframe;
 
@@ -235,6 +263,8 @@
 			}
 			return node;
 		},
+
+		// Helper function to do block-level styling.
 		_setSelectedType: function(node, select) {
 			while(node.parentNode) {
 				var nName = node.nodeName.toLowerCase();
@@ -250,7 +280,7 @@
 			return true;
 		},
 
-		/* Get textarea; Set textarea. */
+		// Get textarea; Set textarea.
 		_textareacontent: function() {
 			var textarea = this.element;
 			var content = textarea.val();
@@ -264,7 +294,7 @@
 			textarea.val(this._iframecontent());			
 		},
 
-		/* Get iframe; Set iframe. */
+		// Get iframe; Set iframe.
 		_iframecontent: function() {
 			var iframe = this.iframe;
 			var content = iframe.contentWindow.document.getElementsByTagName("body")[0].innerHTML;
@@ -279,6 +309,8 @@
 		},
 
 		/* Public methods. */
+
+		// Switch from plain-text to HTML and back.
 		toggle: function() {
 			var textarea = this.element;
 			var iframe = this.iframe;
@@ -299,13 +331,13 @@
 			}
 			this.design = !this.design;
 		},
+		
+		// Get the RTE's content. Has to be aware of what state it is in since we don't keep them in sync.
 		content: function() {
-			if (this.design) {
-				return this._iframecontent();
-			} else {
-				return this._textareacontent();
-			}
+			return this.design ? this._iframecontent() : this._iframecontent();
 		},
+		
+		// Get rid of the plugin.
 		destroy: function() {
 			var textarea = this.element;
 			var iframe = this.iframe;
@@ -316,6 +348,7 @@
 			}
 			toolbar.remove();
 			$(iframe).remove();
+			textarea.removeClass('rte-textarea');
 			textarea.show();
 		},
 		options: {
