@@ -16,11 +16,12 @@
 				iframe.frameMargin = this.options.iframe.margin;
 				iframe.framePadding = this.options.iframe.padding;
 				iframe.className = this.options.iframe.classname;
-				iframe.id = this.element.attr('id') + '_' + this.options.iframe.idsuffix;
+				iframe.id = this.options.iframe.idprefix + '-' + this.element.attr('id');
 			this.iframe = iframe;
 
 			// Add the iframe into the document.
 			textarea.after(iframe);
+			$(iframe).after('<br / style="clear: left;">')
 
 			// Add content to the iframe.
 			var iframecontent = '<html><head><link type="text/css" rel="stylesheet" href="' + this.options.css + '" /></head><body>' + content + '</body></html>';
@@ -68,56 +69,54 @@
 
 			// Great, we're set.
 			this._loadtoolbar();
+			textarea.addClass('rte-textarea');
 			textarea.hide();
 		},
 		_loadtoolbar: function() {
 			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
-
-			var tb = $("<div class='rte-toolbar'><div>\
-				<p>\
+			var toolbar = $("<ul class='rte-toolbar'>\
+				<li>\
 					<select>\
 						<option value=''>Block style</option>\
 						<option value='p'>Paragraph</option>\
 						<option value='h3'>Title</option>\
 						<option value='address'>Address</option>\
 					</select>\
-				</p>\
-				<p>\
-					<a href='#' class='bold'><img src='"+this.options.media_url+"bold.gif' alt='bold' /></a>\
-					<a href='#' class='italic'><img src='"+this.options.media_url+"italic.gif' alt='italic' /></a>\
-				</p>\
-				<p>\
-					<a href='#' class='unorderedlist'><img src='"+this.options.media_url+"unordered.gif' alt='unordered list' /></a>\
-					<a href='#' class='link'><img src='"+this.options.media_url+"link.png' alt='link' /></a>\
-					<a href='#' class='image'><img src='"+this.options.media_url+"image.png' alt='image' /></a>\
-					<a href='#' class='disable'><img src='"+this.options.media_url+"close.gif' alt='close rte' /></a>\
-				</p></div></div>");
+				</li>\
+				<li><a href='#' class='rte-bold'><img src='"+this.options.media_url+"bold.gif' alt='bold' /></a></li>\
+				<li><a href='#' class='rte-italic'><img src='"+this.options.media_url+"italic.gif' alt='italic' /></a></li>\
+				<li><a href='#' class='rte-unorderedlist'><img src='"+this.options.media_url+"unordered.gif' alt='unordered list' /></a></li>\
+				<li><a href='#' class='rte-link'><img src='"+this.options.media_url+"link.png' alt='link' /></a></li>\
+				<li><a href='#' class='rte-image'><img src='"+this.options.media_url+"image.png' alt='image' /></a></li>\
+				<li><a href='#' class='rte-toggle'><img src='"+this.options.media_url+"close.gif' alt='close rte' /></a></li>\
+			</ul>");
 
-			$('select', tb).change(function(){
+			$('select', toolbar).change(function(){
 				var index = this.selectedIndex;
 				if( index!=0 ) {
 					var selected = this.options[index].value;
-					plugin._formatText("formatblock", '<'+selected+'>');
+					plugin._formatText("formatoolbarlock", '<'+selected+'>');
 				}
 			});
-			$('.bold', tb).click(function(){ plugin._formatText('bold');return false; });
-			$('.italic', tb).click(function(){ plugin._formatText('italic');return false; });
-			$('.unorderedlist', tb).click(function(){ plugin._formatText('insertunorderedlist');return false; });
-			$('.link', tb).click(function(){
+			$('.rte-bold', toolbar).click(function(){ plugin._formatText('bold');return false; });
+			$('.rte-italic', toolbar).click(function(){ plugin._formatText('italic');return false; });
+			$('.rte-unorderedlist', toolbar).click(function(){ plugin._formatText('insertunorderedlist');return false; });
+			$('.rte-link', toolbar).click(function(){
+				if (!plugin._getRange()) { alert('Select text first!'); return false; }
 				var p=prompt("URL:");
 				if(p)
 					plugin._formatText('CreateLink', p);
 				return false; });
 
-			$('.image', tb).click(function(){
+			$('.rte-image', toolbar).click(function(){
 				var p=prompt("image URL:");
 				if(p)
 					plugin._formatText('InsertImage', p);
 				return false; });
 
-			$('.disable', tb).click(function() {
+			$('.rte-toggle', toolbar).click(function() {
 				plugin.toggle();
 				return false;
 			});
@@ -137,7 +136,7 @@
 
 			var iframeDoc = $(iframe.contentWindow.document);
 
-			var select = $('select', tb)[0];
+			var select = $('select', toolbar)[0];
 			iframeDoc.mouseup(function(){
 				plugin._setSelectedType(plugin._getSelectionElement(), select);
 				return true;
@@ -150,14 +149,14 @@
 					var iframe_height = parseInt(iframe.style['height'])
 					if(isNaN(iframe_height))
 						iframe_height = 0;
-					var h = Math.min(this.options.max_height, iframe_height+body.scrollTop()) + 'px';
+					var h = Math.min(plugin.options.max_height, iframe_height+body.scrollTop()) + 'px';
 					iframe.style['height'] = h;
 				}
 				return true;
 			});
 
-			this.toolbar = tb;
-			textarea.before(tb);
+			this.toolbar = toolbar;
+			textarea.before(toolbar);
 		},
 		_formatText: function(command, option) {
 			var iframe = this.iframe;
@@ -170,8 +169,37 @@
 			}
 			iframe.contentWindow.focus();
 		},
+		_getRange: function() {
+			var iframe = this.iframe;
+
+			var selection;
+			var range;
+			
+			if (iframe.contentWindow.document.selection) {
+				// IE selections
+				selection = iframe.contentWindow.document.selection;
+				range = selection.createRange();
+			} else {
+				// Mozilla selections
+				try {
+					selection = iframe.contentWindow.getSelection();
+					range = selection.getRangeAt(0);
+				}
+				catch(e){
+					return false;
+				}
+			}
+			var set = (range && range.toString() != '');
+			var value = set ? range.toString() : false;
+
+			return value;
+		},
 		_getSelectionElement: function() {
 			var iframe = this.iframe;
+
+			var selection;
+			var range;
+			var node;
 
 			if (iframe.contentWindow.document.selection) {
 				// IE selections
@@ -241,29 +269,20 @@
 
 		/* Public methods. */
 		toggle: function() {
-			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
 			var toolbar = this.toolbar;
 
 			if (this.design) {
 				// Switch to HTML view.
+				toolbar.find('li').hide().end().find('.rte-toggle').html('RTE').parent().show();
 				this._updatetextarea();
-				toolbar.children().hide();
-				var edm = $('<a class="rte-edm" href="#">Enable design mode</a>');
-				toolbar.append(edm);
 				$(iframe).hide();
 				textarea.show();
-				edm.click(function(e){
-					e.preventDefault();
-					plugin.toggle();
-					// remove, for good measure
-					$(this).remove();
-				});
 			} else {
 				// Switch to design view.
+				toolbar.find('li').show().end().find('.rte-toggle').html("<img src='"+this.options.media_url+"close.gif' alt='close rte' />");
 				this._updateiframe();
-				toolbar.children().show();
 				$(iframe).show();
 				textarea.hide();
 			}
@@ -293,7 +312,7 @@
 			css: "_css/rte.css",
 			dot_net_button_class: null,
 			max_height: 350,
-			iframe: { classname: 'rte', idsuffix: 'iframe', margin: 0, border: 0, padding: 0 },
+			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 },
 			attempts: 3
 		}
 	};
