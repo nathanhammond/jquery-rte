@@ -119,7 +119,7 @@
 				var index = this.selectedIndex;
 				if( index!=0 ) {
 					var selected = this.options[index].value;
-					plugin._formatText("formatoolbarlock", '<'+selected+'>');
+					plugin._formatText("formatblock", '<'+selected+'>');
 				}
 			});
 			
