@@ -26,6 +26,9 @@
 				iframe.id = this.options.iframe.idprefix + '-' + this.element.attr('id');
 			this.iframe = iframe;
 
+			// Set the height equal to the replaced element.
+			$(iframe).css({ 'width': textarea.width(), 'height': textarea.height() });
+
 			// Add the iframe into the document.
 			textarea.after(iframe);
 			$(iframe).after('<br style="clear: left;" />')
