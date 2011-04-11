@@ -9,3 +9,5 @@
 
 .rte-overlay { position: absolute; z-index: 10000; background: #000; }
 .rte-overlay-content { border: 10px solid red; background: #FFF; }
+
+.rte-messageblock { clear: both; }

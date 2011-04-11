@@ -82,12 +82,14 @@
 			this.loaded = true;
 
 			// Capture the textarea.
-			var textarea = this.element;
+			var plugin = this;
+			var textarea = plugin.element;
 
 			// Build the toolbar.
 			// TODO: allow this to be user-specified.
 			this._loadtoolbar();
 			this._buildoverlay();
+			this._buildmessageblock();
 			textarea.addClass('rte-textarea');
 
 			// And we're done.
@@ -135,7 +137,7 @@
 					case 'link':
 						var linktext = plugin._getRange();
 						if (!linktext) {
-							plugin._showoverlay(plugin._buildmessage('Select text first!'));
+							plugin._buildmessage('Select text first!');
 							return false;
 						}
 
@@ -144,7 +146,7 @@
 					case 'image':
 						var linktext = plugin._getRange();
 						if (linktext) {
-							plugin._showoverlay(plugin._buildmessage('Text would be deleted. Select insertion point.'));
+							plugin._buildmessage('Text would be deleted. Select insertion point.');
 							return false;
 						}
 
@@ -185,7 +187,36 @@
 			textarea.before(toolbar);
 		},
 
-		// Build the overlay.
+		// Build the message block. Non-modal information only.
+		_buildmessageblock: function() {
+			var plugin = this;
+			var textarea = this.element;
+
+			var messageblock = $('<div class="rte-messageblock"></div>');
+			
+			textarea.before(messageblock);
+
+			plugin.messageblock = messageblock;
+		},
+		
+		// Helper function to build the message area.
+		_buildmessage: function(body) {
+			var plugin = this;
+
+			var content = $('<p>' + body + ' <a class="rte-cancel" href="#">Close</a></p>')
+			content.find('.rte-cancel').click(function() {
+				content.remove();
+			});
+
+			// Add the P to the message block target.
+			plugin.messageblock.append(content);
+
+			setTimeout(function() {
+				content.remove();
+			},10000);
+		},
+
+		// Build the overlay. Modal, need to act here before doing other things.
 		_buildoverlay: function() {
 			var plugin = this;
 			var overlay = $('<div class="rte-overlay"></div>');
@@ -196,6 +227,8 @@
 				plugin._positionoverlay();
 			});
 			this.overlay = overlay;
+			
+			// FIXME: Actually prevent interaction with the rest of the RTE instead of just covering it.
 		},
 
 		// For positioning the overlay
@@ -238,17 +271,6 @@
 		_overlaycontent: function(content) {
 			var overlay = this.overlay;
 			overlay.append(content);
-		},
-
-		// Helper function to build the message URL overlay.
-		_buildmessage: function(message) {
-			var plugin = this;
-			var content = $('<div class="rte-overlay-content">' + message + '<input class="rte-cancel" type="button" value="Close" /></div>')
-			content.find('input.rte-cancel').click(function() {
-				plugin._hideoverlay();
-			});
-			
-			return content;
 		},
 
 		// Helper function to build the link url overlay.
