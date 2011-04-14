@@ -400,11 +400,12 @@
 
 			return content;			
 		},
-		_updatetextarea: function() {
+		_updatetextarea: function(content) {
 			var textarea = this.element;
-			var iframe = this.iframe;
+
+			content = content != undefined ? content : this._iframecontent();
 			
-			textarea.val(this._iframecontent());			
+			textarea.val(content);
 		},
 
 		// Get iframe; Set iframe.
@@ -414,14 +415,21 @@
 
 			return content;
 		},
-		_updateiframe: function() {
-			var textarea = this.element;
+		_updateiframe: function(content) {
 			var iframe = this.iframe;
 
-			$(iframe).contents().find("body").html(this._textareacontent());
+			content = content != undefined ? content : this._textareacontent();
+
+			$(iframe).contents().find("body").html(content);
 		},
 
+
 		/* Public methods. */
+
+		// Set the focus.
+		focus: function() {
+			this.iframe.contentWindow.focus();
+		},
 
 		// Switch from plain-text to HTML and back.
 		toggle: function() {
@@ -446,8 +454,13 @@
 		},
 		
 		// Get the RTE's content. Has to be aware of what state it is in since we don't keep them in sync.
-		content: function() {
-			return this.design ? this._iframecontent() : this._iframecontent();
+		content: function(content) {
+			if (content != undefined) {
+				this._updatetextarea(content);
+				this._updateiframe();
+			} else {
+				return this.design ? this._iframecontent() : this._textareacontent();
+			}
 		},
 		
 		// Get rid of the plugin.
@@ -465,6 +478,7 @@
 			textarea.removeClass('rte-textarea');
 			textarea.show();
 		},
+
 		options: {
 			media_url: "_img/",
 			css: "_css/jquery.rte.css",
