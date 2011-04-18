@@ -4,27 +4,27 @@
 		
 		// Let's get started.
 		_init: function() {
-			// Set some state flags.
-			this.design = false;
-			this.loaded = false;
+			// Always.
+			var plugin = this;
+
+			// Set a state flag.
+			plugin.rtemode = false;
 
 			// Make sure we've always got the right elements in any closure.
-			var textarea = this.element;
-			var content = textarea.val();
-
-			// Mozilla needs this to display caret
-			if ($.trim(content) == '') {
-				content = '<br />';
-			}
+			var textarea = plugin.element;
+			var options = plugin.options;
 
 			// Build the iframe the old-fashioned way to make it work.
 			var iframe = document.createElement("iframe");
-				iframe.frameBorder = this.options.iframe.border;
-				iframe.frameMargin = this.options.iframe.margin;
-				iframe.framePadding = this.options.iframe.padding;
-				iframe.className = this.options.iframe.classname;
-				iframe.id = this.options.iframe.idprefix + '-' + this.element.attr('id');
-			this.iframe = iframe;
+				iframe.frameBorder = options.iframe.border;
+				iframe.frameMargin = options.iframe.margin;
+				iframe.framePadding = options.iframe.padding;
+				iframe.className = options.iframe.classname;
+				iframe.id = options.iframe.idprefix + '-' + textarea.attr('id');
+				iframe.src='javascript:';
+
+			// Save ourselves a reference.
+			plugin.iframe = iframe;
 
 			// Set the height equal to the replaced element.
 			$(iframe).css({ 'width': textarea.width(), 'height': textarea.height() });
@@ -33,67 +33,38 @@
 			textarea.after(iframe);
 			$(iframe).after('<br style="clear: left;" />')
 
-			// Add content to the iframe.
-			var iframecontent = '<html><head><link type="text/css" rel="stylesheet" href="' + this.options.css + '" /></head><body>' + content + '</body></html>';
-			this._designmode(iframecontent, this.options.attempts);		
-		},
-		
-		// The iframe has been added to the page, try and set it to design mode.
-		_designmode: function(iframecontent, remaining) {
-			// Make sure we've always got the right elements in any closure.
-			var plugin = this;
-			var textarea = this.element;
-			var iframe = this.iframe;
+			// Build content for the iframe.
+			var textareacontent = textarea.val();
+			if ($.trim(textareacontent) == '') { textareacontent = '<br />'; } // Mozilla needs this to display caret
+			var iframecontent = '<html><head><link type="text/css" rel="stylesheet" href="' + options.css + '" /></head><body>' + textareacontent + '</body></html>';
 
+			// Set up the iframe for rich text editing.
 			try {
-				// Add the content to the iframe
 				iframe.contentWindow.document.open();
 				iframe.contentWindow.document.write(iframecontent);
 				iframe.contentWindow.document.close();
-			} catch (error) {
-				// No way to recover from unsuccessfully writing the iframe content.
-			}
-
-			if (document.contentEditable) {
 				iframe.contentWindow.document.designMode = "On";
-				this._iframeready()
+			} catch (e) {
+				plugin.destroy();
 				return;
-			} else if (document.designMode != null) {
-				try {
-					iframe.contentWindow.document.designMode = "on";
-					this._iframeready()
-					return;
-				} catch (error) {
-					// No way to recover from failing to enter design mode.
-				}
 			}
 
-			if (remaining-- > 0) {
-				// Try again in case the iframe is taking its own sweet time.
-				setTimeout(function() { plugin._designmode(iframecontent, remaining); }, 500);
-			} else {
-				this.destroy();
-			}
-		},
-
-		// The iframe is loaded, we're ready to toggle on design mode.
-		_iframeready: function() {
-			// Set some state flags.
-			this.loaded = true;
-
-			// Capture the textarea.
-			var plugin = this;
-			var textarea = plugin.element;
+			// Congratulations! We're ready for interaction with the iframe.
+			textarea.addClass('rte-textarea');
 
 			// Build the toolbar.
 			// TODO: allow this to be user-specified.
-			this._loadtoolbar();
-			this._buildoverlay();
-			this._buildmessageblock();
-			textarea.addClass('rte-textarea');
+			plugin._loadtoolbar();
+			plugin._buildoverlay();
+			plugin._buildmessageblock();
 
-			// And we're done.
-			this.toggle();
+			// Propagate events on the iframe to the textarea.
+			var propagate = function (e) { textarea.trigger(e); }
+			$(iframe.contentWindow).bind('click scroll focus blur', propagate);
+			$(iframe.contentWindow.document).bind('click dblclick keydown keypress keyup copy paste input mousedown mousemove mouseup mouseover mouseout mouseenter mouseleave', propagate);
+
+			// And we're done, turn on rtemode.
+			plugin.toggle();
 		},
 
 		// This builds the toolbar, adds its events, and inserts it into the page.
@@ -163,6 +134,24 @@
 				return false;
 			});
 
+			textarea.bind('keydown', 'ctrl+b meta+b', function() {
+				if (!plugin.rtemode) { return true; }
+				plugin._formatText('bold');
+				return false;
+			});
+			textarea.bind('keypress', 'ctrl+b meta+b', function() {
+				return !plugin.rtemode;
+			});
+
+			textarea.bind('keydown', 'ctrl+i meta+i', function() {
+				if (!plugin.rtemode) { return true; }
+				plugin._formatText('italic');
+				return false;
+			});
+			textarea.bind('keypress', 'ctrl+i meta+i', function() {
+				return !plugin.rtemode;
+			});
+
 			// .NET compatability
 			if(this.options.dot_net_button_class) {
 				var dot_net_button = $(iframe).parents('form').find(this.options.dot_net_button_class);
@@ -190,7 +179,7 @@
 		// Build the message block. Non-modal information only.
 		_buildmessageblock: function() {
 			var plugin = this;
-			var textarea = this.element;
+			var textarea = plugin.element;
 
 			var messageblock = $('<div class="rte-messageblock"></div>');
 			
@@ -226,20 +215,21 @@
 			$(window).bind('resize', function() {
 				plugin._positionoverlay();
 			});
-			this.overlay = overlay;
+			plugin.overlay = overlay;
 			
 			// FIXME: Actually prevent interaction with the rest of the RTE instead of just covering it.
 		},
 
 		// For positioning the overlay
 		_positionoverlay: function() {
-			var toolbar = this.toolbar;
-			var iframe = this.iframe;
-			var overlay = this.overlay;
+			var plugin = this;
+			var toolbar = plugin.toolbar;
+			var iframe = plugin.iframe;
+			var overlay = plugin.overlay;
 
 			var toolbarposition = toolbar.position();
-			var iframeposition = $(iframe).position();
 			var toolbarwidth = toolbar.outerWidth();
+			var iframeposition = $(iframe).position();
 			var iframewidth = $(iframe).outerWidth();
 			var iframeheight = $(iframe).outerHeight();
 
@@ -254,22 +244,25 @@
 
 		// Show the overlay.
 		_showoverlay: function(content) {
-			var overlay = this.overlay;
-			this._positionoverlay();
-			this._overlaycontent(content)
+			var plugin = this;
+			var overlay = plugin.overlay;
+			plugin._positionoverlay();
+			plugin._overlaycontent(content)
 			overlay.show();			
 		},
 
 		// Hide the overlay.
 		_hideoverlay: function() {
-			var overlay = this.overlay;
+			var plugin = this;
+			var overlay = plugin.overlay;
 			overlay.hide();
 			overlay.empty();
 		},
 
 		// Set the content of the overlay.
 		_overlaycontent: function(content) {
-			var overlay = this.overlay;
+			var plugin = this;
+			var overlay = plugin.overlay;
 			overlay.append(content);
 		},
 
@@ -307,13 +300,15 @@
 
 		// Helper function to ensure the commands are correctly passed to the iframe.
 		_formatText: function(command, option) {
-			var iframe = this.iframe;
+			var plugin = this;
+			var textarea = plugin.element;
+			var iframe = plugin.iframe;
 
 			iframe.contentWindow.focus();
-			try{
+			try {
 				iframe.contentWindow.document.execCommand(command, false, option);
-			}catch(e){
-				//console.log(e)
+			} catch (e) {
+				// Oops.
 			}
 			iframe.contentWindow.focus();
 		},
@@ -423,34 +418,43 @@
 			$(iframe).contents().find("body").html(content);
 		},
 
-
 		/* Public methods. */
 
 		// Set the focus.
 		focus: function() {
-			this.iframe.contentWindow.focus();
+			var plugin = this;
+			var textarea = plugin.element;
+			var iframe = plugin.iframe;
+
+			if (plugin.rtemode) {
+				iframe.contentWindow.focus();
+			} else {
+				textarea.focus();
+			}
 		},
 
 		// Switch from plain-text to HTML and back.
 		toggle: function() {
-			var textarea = this.element;
-			var iframe = this.iframe;
-			var toolbar = this.toolbar;
+			var plugin = this;
+			var textarea = plugin.element;
+			var iframe = plugin.iframe;
+			var toolbar = plugin.toolbar;
 
-			if (this.design) {
+			if (plugin.rtemode) {
 				// Switch to HTML view.
 				toolbar.find('li').hide().end().find('.rte-toggle').html('RTE').parent().show();
-				this._updatetextarea();
+				plugin._updatetextarea();
 				$(iframe).hide();
 				textarea.show();
 			} else {
 				// Switch to design view.
 				toolbar.find('li').show().end().find('.rte-toggle').html("<img src='"+this.options.media_url+"close.gif' alt='close rte' />");
-				this._updateiframe();
+				plugin._updateiframe();
 				$(iframe).show();
 				textarea.hide();
 			}
-			this.design = !this.design;
+			plugin.rtemode = !plugin.rtemode;
+			plugin.focus();
 		},
 		
 		// Get the RTE's content. Has to be aware of what state it is in since we don't keep them in sync.
@@ -459,7 +463,7 @@
 				this._updatetextarea(content);
 				this._updateiframe();
 			} else {
-				return this.design ? this._iframecontent() : this._textareacontent();
+				return this.rtemode ? this._iframecontent() : this._textareacontent();
 			}
 		},
 		
@@ -469,7 +473,7 @@
 			var iframe = this.iframe;
 			var toolbar = this.toolbar;
 
-			if (this.design) {
+			if (this.rtemode) {
 				this._updatetextarea();
 			}
 			toolbar.remove();
@@ -483,8 +487,7 @@
 			media_url: "_img/",
 			css: "_css/jquery.rte.css",
 			dot_net_button_class: null,
-			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 },
-			attempts: 3
+			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 }
 		}
 	};
 	$.widget("ui.rte", RTE);
