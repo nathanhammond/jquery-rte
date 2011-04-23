@@ -60,12 +60,20 @@
 
 			// Propagate events on the iframe to the textarea.
 			var propagate = function (e) { textarea.trigger(e); }
-			$(iframe.contentWindow).bind('click scroll focus blur', propagate);
+
+			// Prevent navigation from keypresses.
+			if ($.browser.mozilla) {
+				$(iframe.contentDocument).bind('keydown', 'meta+left meta+right', function(e) { return false; });				
+			}
+
+			$(iframe.contentWindow).bind('scroll focus blur', propagate);
 			$(iframe.contentWindow.document).bind('click dblclick keydown keypress keyup copy paste input mousedown mousemove mouseup mouseover mouseout mouseenter mouseleave', propagate);
 
 			// And we're done, turn on rtemode.
 			plugin.toggle();
 		},
+
+		/* Layout of the RTE itself. */
 
 		// This builds the toolbar, adds its events, and inserts it into the page.
 		_loadtoolbar: function() {
@@ -73,83 +81,206 @@
 			var plugin = this;
 			var textarea = this.element;
 			var iframe = this.iframe;
+			plugin.commands = [];
 
-			// Build the toolbar.
-			var toolbar = $("<ul class='rte-toolbar'>\
-				<li>\
-					<select>\
-						<option value=''>Block style</option>\
-						<option value='p'>Paragraph</option>\
-						<option value='h3'>Title</option>\
-						<option value='address'>Address</option>\
-					</select>\
-				</li>\
-				<li><a href='#' class='rte-bold'><img src='"+this.options.media_url+"bold.gif' alt='bold' /></a></li>\
-				<li><a href='#' class='rte-italic'><img src='"+this.options.media_url+"italic.gif' alt='italic' /></a></li>\
-				<li><a href='#' class='rte-unorderedlist'><img src='"+this.options.media_url+"unordered.gif' alt='unordered list' /></a></li>\
-				<li><a href='#' class='rte-link'><img src='"+this.options.media_url+"link.png' alt='link' /></a></li>\
-				<li><a href='#' class='rte-image'><img src='"+this.options.media_url+"image.png' alt='image' /></a></li>\
-				<li><a href='#' class='rte-toggle'><img src='"+this.options.media_url+"close.gif' alt='close rte' /></a></li>\
-			</ul>");
-
-			$('select', toolbar).change(function(){
-				var index = this.selectedIndex;
-				if( index!=0 ) {
-					var selected = this.options[index].value;
-					plugin._formatText("formatblock", '<'+selected+'>');
-				}
-			});
-			
-			toolbar.delegate('a', 'click', function() {
-				$this = $(this);
-				var action = $this.attr('class').split('-')[1];
-
-				switch (action) {
-					case 'link':
-						var linktext = plugin._getRange();
-						if (!linktext) {
-							plugin._buildmessage('Select text first!');
-							return false;
+			var formatblock = {
+				element: $('<select class="rte-formatblock"></select>'),
+				values: [
+					{ value: '', text: 'Normal Text' },
+					{ value: 'h1', text: 'Header 1' },
+					{ value: 'p', text: 'Paragraph' }
+				],
+				execute: function(value) {
+					if (!value) return;
+					
+					value = '<' + value + '>';
+					return iframe.contentWindow.document.execCommand('formatblock', false, value);
+				},
+				state: function() {
+					var value = iframe.contentWindow.document.queryCommandValue('formatblock');
+					return (typeof value == "string" ? value.replace(/[<>]*/g,'') : '');
+				},
+				ui: function() {
+					var value = this.state();
+					this.element.val(value);
+				},
+				setup: function() {
+					var self = this;
+					
+					var options = '';
+					for (var i = 0; i < this.values.length; i++) {
+						options += '<option value="'+this.values[i].value+'">'+this.values[i].text+'</option>';
+						if (this.values[i].keyboard) {
+							textarea.bind('keydown', this.values[i].keyboard, (function(e) { var which = i; return function() { self.element.val(self.values[which].value); self.element.trigger('change'); e.preventDefault(); } })());
+							textarea.bind('keypress', this.values[i].keyboard, false);
 						}
+					}
+					this.element.append(options)
 
+					this.element.get(0).unselectable = "on"; // IE, prevent focus		
+					this.element.bind('change', function(e) {
+						iframe.contentWindow.focus();
+						self.execute($(this).val());
+						plugin._updateToolbar();
+					});
+										
+					return this.element;
+				}
+			};
+
+			var bold = {
+				element: $('<a class="rte-bold" href="#">Bold</a>'),
+				keyboard: 'meta+b ctrl+b',
+				execute: function() {
+					return iframe.contentWindow.document.execCommand('Bold', false, null);
+				},
+				state: function() {
+					return iframe.contentWindow.document.queryCommandState('Bold');
+				},
+				ui: function() {
+					if (this.state()) {
+						this.element.addClass('active');
+					} else {
+						this.element.removeClass('active');			
+					}
+				},
+				setup: function() {
+					var self = this;
+
+					this.element.get(0).unselectable = "on";
+					this.element.bind('mousedown', function(e) {
+						e.preventDefault();
+					});
+					this.element.bind('click', function(e) {
+						e.preventDefault();
+						self.execute();
+						plugin._updateToolbar();
+					});
+
+					textarea.bind('keydown', this.keyboard, function(e){ e.preventDefault(); self.execute(); });
+					textarea.bind('keypress', this.keyboard, false);
+					return this.element;
+				}
+			};
+
+			var italic = {
+				element: $('<a class="rte-italic" href="#">Italic</a>'),
+				keyboard: 'meta+i ctrl+i',
+				execute: function() {
+					return iframe.contentWindow.document.execCommand('Italic', false, null);
+				},
+				state: function() {
+					return iframe.contentWindow.document.queryCommandState('Italic');
+				},
+				ui: function() {
+					if (this.state()) {
+						this.element.addClass('active');
+					} else {
+						this.element.removeClass('active');			
+					}
+				},
+				setup: function() {
+					var self = this;
+
+					this.element.get(0).unselectable = "on";
+					this.element.bind('mousedown', function(e) {
+						e.preventDefault();
+					});
+					this.element.bind('click', function(e) {
+						e.preventDefault();
+						self.execute();
+						plugin._updateToolbar();
+					});
+
+					textarea.bind('keydown', this.keyboard, function(e){ e.preventDefault(); self.execute(); });
+					textarea.bind('keypress', this.keyboard, false);
+					return this.element;
+				}
+			};
+
+			var link = {
+				element: $('<a class="rte-link" href="#">Link</a>'),
+				execute: function() {
+					var linktext = plugin._getRange();
+					if (!linktext) {
+						plugin._buildmessage('Select text first!');
+						return false;
+					} else {
 						plugin._showoverlay(plugin._buildlink(linktext));
-						break;
-					case 'image':
-						var linktext = plugin._getRange();
-						if (linktext) {
-							plugin._buildmessage('Text would be deleted. Select insertion point.');
-							return false;
-						}
+					}
+				},
+				state: function() {},
+				ui: function() {},
+				setup: function() {
+					var self = this;
+					this.element.bind('click', function(e) {
+						e.preventDefault();
+						self.execute();
+					});
 
-						plugin._showoverlay(plugin._buildimage());
-						break;
-					case 'toggle':
-						plugin.toggle();
-						break;
-					default:
-						// bold, italic, unorderedlist
-						plugin._formatText(action);
-						break;
+					return this.element;
 				}
-				return false;
-			});
+			};
 
-			textarea.bind('keydown', 'ctrl+b meta+b', function() {
-				if (!plugin.rtemode) { return true; }
-				plugin._formatText('bold');
-				return false;
-			});
-			textarea.bind('keypress', 'ctrl+b meta+b', function() {
-				return !plugin.rtemode;
-			});
+			var image = {
+				element: $('<a class="rte-image" href="#">Image</a>'),
+				execute: function() {
+					var linktext = plugin._getRange();
+					if (linktext) {
+						plugin._buildmessage('Text would be deleted. Select insertion point.');
+						return false;
+					} else {
+						plugin._showoverlay(plugin._buildimage());						
+					}
+				},
+				state: function() {},
+				ui: function() {},
+				setup: function() {
+					var self = this;
+					this.element.bind('click', function(e) {
+						e.preventDefault();
+						self.execute();
+					});
 
-			textarea.bind('keydown', 'ctrl+i meta+i', function() {
-				if (!plugin.rtemode) { return true; }
-				plugin._formatText('italic');
-				return false;
-			});
-			textarea.bind('keypress', 'ctrl+i meta+i', function() {
-				return !plugin.rtemode;
+					return this.element;
+				}
+			};
+
+			var toggle = {
+				element: $('<a class="rte-toggle" href="#">Toggle</a>'),
+				execute: function() { plugin.toggle(); },
+				state: function() { return plugin.rtemode; },
+				ui: function() {},
+				setup: function() {
+					var self = this;
+
+					this.element.get(0).unselectable = "on";
+					this.element.bind('mousedown', function(e) {
+						e.preventDefault();
+					});
+					this.element.bind('click', function(e) {
+						e.preventDefault();
+						self.execute();
+					});
+					
+					return this.element;
+				}
+			};
+
+			plugin.commands.push(formatblock);
+			plugin.commands.push(bold);
+			plugin.commands.push(italic);
+			plugin.commands.push(link);
+			plugin.commands.push(image);
+			plugin.commands.push(toggle);
+			
+			var toolbar = $('<ul class="rte-toolbar"></ul>');
+			for (var i = 0; i < plugin.commands.length; i++) {
+				toolbar.append(plugin.commands[i].setup().wrap('<li></li>'));
+			}			
+
+			textarea.bind('click keyup', function() {
+				plugin._updateToolbar();
 			});
 
 			// .NET compatability
@@ -165,15 +296,17 @@
 				});
 			}
 
-			var $iframeDoc = $(iframe.contentWindow.document);
-			var select = $('select', toolbar)[0];
-			$iframeDoc.bind('mouseup keyup', function(){
-				plugin._setSelectedType(plugin._getSelectionElement(), select);
-				return true;
-			});
-
-			this.toolbar = toolbar;
+			plugin.toolbar = toolbar;
 			textarea.before(toolbar);
+		},
+
+		_updateToolbar: function() {
+			var plugin = this;
+			var commands = plugin.commands;
+
+			for (var i = 0; i < commands.length; i++) {
+				commands[i].ui();
+			}
 		},
 
 		// Build the message block. Non-modal information only.
@@ -193,7 +326,8 @@
 			var plugin = this;
 
 			var content = $('<p>' + body + ' <a class="rte-cancel" href="#">Close</a></p>')
-			content.find('.rte-cancel').click(function() {
+			content.find('.rte-cancel').bind('click', function(e) {
+				e.preventDefault();
 				content.remove();
 			});
 
@@ -272,7 +406,7 @@
 			var content = $('<div class="rte-overlay-content">'+ linktext +'URL: <input class="rte-url" type="text" /><input class="rte-cancel" type="button" value="Close" /><input class="rte-submit" type="button" value="Submit" /></div>')
 			var $url = content.find('input.rte-url');
 			content.find('input.rte-submit').click(function() {
-				plugin._formatText('CreateLink', $url.val());
+				plugin._execCommand('CreateLink', $url.val());
 				plugin._hideoverlay();
 			});
 			content.find('input.rte-cancel').click(function() {
@@ -288,7 +422,7 @@
 			var content = $('<div class="rte-overlay-content">URL: <input class="rte-url" type="text" /><input class="rte-cancel" type="button" value="Close" /><input class="rte-submit" type="button" value="Submit" /></div>')
 			var $url = content.find('input.rte-url');
 			content.find('input.rte-submit').click(function() {
-				plugin._formatText('InsertImage', $url.val());
+				plugin._execCommand('InsertImage', $url.val());
 				plugin._hideoverlay();
 			});
 			content.find('input.rte-cancel').click(function() {
@@ -298,19 +432,25 @@
 			return content;
 		},
 
+		/* Command handling. */
+
 		// Helper function to ensure the commands are correctly passed to the iframe.
-		_formatText: function(command, option) {
+		_execCommand: function(command, value) {
 			var plugin = this;
-			var textarea = plugin.element;
 			var iframe = plugin.iframe;
 
-			iframe.contentWindow.focus();
-			try {
-				iframe.contentWindow.document.execCommand(command, false, option);
-			} catch (e) {
-				// Oops.
-			}
-			iframe.contentWindow.focus();
+			console.log('iframe.contentWindow.document.execCommand('+command+', false, '+value+')');
+			console.log(iframe.contentWindow.document.designMode);
+
+			iframe.contentWindow.focus()
+			iframe.contentWindow.document.execCommand(command, false, value);
+		},
+		
+		_queryCommand: function(command) {
+			var plugin = this;
+			var iframe = plugin.iframe;
+
+			iframe.contentWindow.document.queryCommandState(command);
 		},
 
 		// Helper function to grab the text value of the range.
@@ -319,24 +459,25 @@
 
 			var selection;
 			var range;
-			
+			var value = false;
+
 			if (iframe.contentWindow.document.selection) {
 				// IE selections
 				selection = iframe.contentWindow.document.selection;
 				range = selection.createRange();
+				value = range.text;
 			} else {
 				// Mozilla selections
 				try {
 					selection = iframe.contentWindow.getSelection();
 					range = selection.getRangeAt(0);
+					value = range.toString();
 				}
 				catch(e){
 					return false;
 				}
 			}
-			var set = (range && range.toString() != '');
-			var value = set ? range.toString() : false;
-
+			
 			return value;
 		},
 
@@ -406,7 +547,7 @@
 		// Get iframe; Set iframe.
 		_iframecontent: function() {
 			var iframe = this.iframe;
-			var content = iframe.contentWindow.document.getElementsByTagName("body")[0].innerHTML;
+			var content = $(iframe.contentWindow.document.body).html();
 
 			return content;
 		},
@@ -415,7 +556,7 @@
 
 			content = content != undefined ? content : this._textareacontent();
 
-			$(iframe).contents().find("body").html(content);
+			$(iframe.contentWindow.document.body).html(content);
 		},
 
 		/* Public methods. */
@@ -490,5 +631,6 @@
 			iframe: { classname: 'rte-iframe', idprefix: 'rte', margin: 0, border: 0, padding: 0 }
 		}
 	};
+
 	$.widget("ui.rte", RTE);
 })(jQuery);
